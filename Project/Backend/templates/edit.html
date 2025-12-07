@@ -1,0 +1,33 @@
+
+<!doctype html>
+<html>
+<head><meta charset="utf-8"/><title>Text Editor — PIN {{ pin }}</title>
+<style>body{font-family:Arial;}textarea{width:100%;height:60vh;}</style>
+</head>
+<body>
+<h2>Text Editor — PIN <b>{{ pin }}</b></h2>
+<div>Expires: <span id="expiry">{{ expiry }}</span> | <button onclick="closeWindow()">Close</button></div>
+<textarea id="editor"></textarea>
+<script>
+const pin="{{ pin }}";
+const ws=new WebSocket(`ws://${location.host}/ws/${pin}`);
+const editor=document.getElementById('editor');
+let ignore_local=false;
+
+ws.onopen=()=>console.log('WS open');
+ws.onmessage=(evt)=>{
+    const msg=JSON.parse(evt.data);
+    if(msg.type==='init'){editor.value=msg.text;}
+    else if(msg.type==='update'){ignore_local=true;editor.value=msg.text;setTimeout(()=>ignore_local=false,50);}
+};
+ws.onclose=()=>alert('Connection closed or expired.');
+
+editor.addEventListener('input', ()=>{
+    if(ignore_local) return;
+    ws.send(JSON.stringify({type:'update', text:editor.value}));
+});
+
+function closeWindow(){ws.close(); window.location='/'}
+</script>
+</body>
+</html>
